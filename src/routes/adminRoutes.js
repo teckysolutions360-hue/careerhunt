@@ -1,6 +1,6 @@
 import express from 'express'
 import { protect, authorize } from '../middleware/auth.js'
-import Job from '../models/Job.js'
+import Job from '../models/job.js'
 import User from '../models/User.js'
 import Company from '../models/Company.js'
 import Category from '../models/Category.js'

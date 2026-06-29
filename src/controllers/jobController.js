@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import Job from '../models/Job.js';
+import Job from '../models/job.js';
 import Company from '../models/Company.js';
 import slugify from 'slugify';
 import User from '../models/User.js';
