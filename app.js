@@ -1,6 +1,7 @@
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
 import authRoutes from './src/routes/authRoutes.js';
@@ -16,11 +17,9 @@ import salaryGuideRoutes from './src/routes/salaryGuideRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import './db.js';
 
-dotenv.config();
-
 if (!process.env.JWT_SECRET) {
-  console.error('Missing required environment variable: JWT_SECRET');
-  process.exit(1);
+  console.warn('Missing required environment variable: JWT_SECRET');
+  console.warn('Auth routes may fail without JWT_SECRET configured.');
 }
 
 const app = express();
