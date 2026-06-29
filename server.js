@@ -38,6 +38,8 @@ const corsOptions = {
 if (process.env.NODE_ENV === 'production') {
   corsOptions.origin = [
     process.env.FRONTEND_URL,
+    'https://careerhunt.online',
+    'https://www.careerhunt.online',
     'https://careerhunt.onlie'
   ].filter(Boolean)
 } else {
