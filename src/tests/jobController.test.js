@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveEmployerCompanyDetails } from '../controllers/jobController.js';
+import { resolveEmployerCompanyDetails, normalizeCompanyId } from '../controllers/jobController.js';
 
 test('uses the authenticated employer name when no company name is provided', () => {
   const result = resolveEmployerCompanyDetails({ name: 'Alice Johnson', email: 'alice@example.com' }, {});
@@ -16,4 +16,15 @@ test('prefers an explicit company name when one is supplied', () => {
   );
 
   assert.equal(result.companyName, 'Acme Studio');
+});
+
+test('returns null for malformed company ids', () => {
+  assert.equal(normalizeCompanyId('not-a-valid-object-id'), null);
+  assert.equal(normalizeCompanyId(''), null);
+  assert.equal(normalizeCompanyId(undefined), null);
+});
+
+test('returns a valid company id unchanged', () => {
+  const validId = '507f1f77bcf86cd799439011';
+  assert.equal(normalizeCompanyId(validId), validId);
 });

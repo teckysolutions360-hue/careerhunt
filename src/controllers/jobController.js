@@ -5,6 +5,17 @@ import Company from '../models/Company.js';
 import slugify from 'slugify';
 import User from '../models/User.js';
 
+export const normalizeCompanyId = (companyId) => {
+  if (!companyId) return null;
+  if (typeof companyId === 'object' && companyId?.toString) {
+    const normalized = companyId.toString();
+    return mongoose.Types.ObjectId.isValid(normalized) ? normalized : null;
+  }
+  if (typeof companyId !== 'string') return null;
+  const trimmed = companyId.trim();
+  return mongoose.Types.ObjectId.isValid(trimmed) ? trimmed : null;
+};
+
 export const resolveEmployerCompanyDetails = (user, jobData = {}) => {
   const fallbackName = user?.name || user?.username || user?.email?.split('@')[0] || 'Employer'
   const companyName = jobData.companyName || fallbackName || 'Default Company'
@@ -25,17 +36,19 @@ export const createJob = async (req, res) => {
     jobData.slug = slug;
     
     const { companyName, companyWebsite, companyDescription } = resolveEmployerCompanyDetails(req.user, jobData);
+    const normalizedUserCompanyId = normalizeCompanyId(req.user?.companyId);
+    const providedCompanyId = normalizeCompanyId(jobData.companyId);
 
     // Set company based on user role
     if (req.user.role === 'employer') {
       let employerCompany = null;
 
-      if (req.user.companyId) {
-        employerCompany = await Company.findById(req.user.companyId);
+      if (normalizedUserCompanyId) {
+        employerCompany = await Company.findById(normalizedUserCompanyId);
       }
 
       if (!employerCompany) {
-        if (req.user && req.user.companyId) {
+        if (req.user && normalizedUserCompanyId) {
           // The stored companyId references a missing company; clear it before recreating.
           req.user.companyId = undefined;
         }
@@ -58,8 +71,10 @@ export const createJob = async (req, res) => {
       jobData.companyId = employerCompany._id;
       jobData.createdBy = req.user.id;
     } else if (req.user.role === 'admin') {
-      // For admins, use provided companyId when valid, otherwise fall back to a system admin company.
-      if (!jobData.companyId || !mongoose.Types.ObjectId.isValid(jobData.companyId)) {
+      // For admins, use a valid provided companyId when present; otherwise fall back to a system admin company.
+      if (providedCompanyId) {
+        jobData.companyId = providedCompanyId;
+      } else {
         let adminCompany = await Company.findOne({ name: 'System Admin Company' });
         if (!adminCompany) {
           adminCompany = await Company.create({
@@ -80,12 +95,7 @@ export const createJob = async (req, res) => {
         message: 'Company ID is required to create a job'
       });
     }
-    
-    if (!jobData.city && jobData.cityName) {
-      jobData.city = jobData.cityName;
-      delete jobData.cityName;
-    }
-    if (!jobData.country) jobData.country = 'Not Specified';
+
     if (!jobData.category) jobData.category = 'General';
 
     const job = new Job(jobData);
