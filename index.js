@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import app from './app.js';
+import { connectDB } from './db.js';
 
-export default function handler(req, res) {
-  return app(req, res);
-}
+await connectDB();
+
+export default app;
 
 export const config = {
   runtime: 'nodejs'

@@ -15,14 +15,18 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => {
+import { connectDB } from './db.js';
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
     console.error('MongoDB connection error:', err);
     process.exit(1);
-  });
+  }
+};
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+startServer();

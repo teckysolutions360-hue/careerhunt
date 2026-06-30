@@ -1,6 +1,4 @@
-﻿import 'dotenv/config';
-import './db.js';
-import express from 'express';
+﻿import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
@@ -24,6 +22,13 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
+
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CareerHunt API Running'
+  });
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'API is running' });
