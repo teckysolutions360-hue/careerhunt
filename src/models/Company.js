@@ -4,7 +4,7 @@ const companySchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true
+    // allow duplicate names because jobs can provide per-job company names
   },
   slug: {
     type: String,

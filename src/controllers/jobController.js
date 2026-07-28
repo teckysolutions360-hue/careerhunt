@@ -38,38 +38,57 @@ export const createJob = async (req, res) => {
     const { companyName, companyWebsite, companyDescription } = resolveEmployerCompanyDetails(req.user, jobData);
     const normalizedUserCompanyId = normalizeCompanyId(req.user?.companyId);
     const providedCompanyId = normalizeCompanyId(jobData.companyId);
+    const explicitCompanyName = typeof req.body.companyName === 'string' && req.body.companyName.trim() !== '';
+
+    if (companyName) {
+      jobData.companyName = companyName;
+    }
 
     // Set company based on user role
     if (req.user.role === 'employer') {
-      let employerCompany = null;
-
-      if (normalizedUserCompanyId) {
-        employerCompany = await Company.findById(normalizedUserCompanyId);
-      }
-
-      if (!employerCompany) {
-        if (req.user && normalizedUserCompanyId) {
-          // The stored companyId references a missing company; clear it before recreating.
-          req.user.companyId = undefined;
-        }
-
-        employerCompany = await Company.create({
+      // If the employer explicitly provided a company name for this job, create a new
+      // per-job Company record and DO NOT attach it to the employer user's companyId.
+      if (explicitCompanyName) {
+        const perJobCompany = await Company.create({
           name: companyName,
           slug: `${slugify(companyName, { lower: true, strict: true })}-${Date.now()}`,
           website: companyWebsite,
           description: companyDescription
         });
 
-        try {
-          await User.findByIdAndUpdate(req.user.id, { companyId: employerCompany._id });
-          req.user.companyId = employerCompany._id;
-        } catch (err) {
-          console.error('Failed to assign companyId to user:', err);
-        }
-      }
+        jobData.companyId = perJobCompany._id;
+        jobData.createdBy = req.user.id;
+      } else {
+        let employerCompany = null;
 
-      jobData.companyId = employerCompany._id;
-      jobData.createdBy = req.user.id;
+        if (normalizedUserCompanyId) {
+          employerCompany = await Company.findById(normalizedUserCompanyId);
+        }
+
+        if (!employerCompany) {
+          if (req.user && normalizedUserCompanyId) {
+            // The stored companyId references a missing company; clear it before recreating.
+            req.user.companyId = undefined;
+          }
+
+          employerCompany = await Company.create({
+            name: companyName,
+            slug: `${slugify(companyName, { lower: true, strict: true })}-${Date.now()}`,
+            website: companyWebsite,
+            description: companyDescription
+          });
+
+          try {
+            await User.findByIdAndUpdate(req.user.id, { companyId: employerCompany._id });
+            req.user.companyId = employerCompany._id;
+          } catch (err) {
+            console.error('Failed to assign companyId to user:', err);
+          }
+        }
+
+        jobData.companyId = employerCompany._id;
+        jobData.createdBy = req.user.id;
+      }
     } else if (req.user.role === 'admin') {
       // For admins, use a valid provided companyId when present; otherwise fall back to a system admin company.
       if (providedCompanyId) {
@@ -271,6 +290,10 @@ export const updateJob = async (req, res) => {
     
     if (companyWebsite !== undefined) {
       updates.companyWebsite = companyWebsite;
+    }
+
+    if (companyName !== undefined) {
+      updates.companyName = companyName;
     }
 
     const job = await Job.findById(id);

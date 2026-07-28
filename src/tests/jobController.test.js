@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveEmployerCompanyDetails, normalizeCompanyId } from '../controllers/jobController.js';
+import Job from '../models/job.js';
 
 test('uses the authenticated employer name when no company name is provided', () => {
   const result = resolveEmployerCompanyDetails({ name: 'Alice Johnson', email: 'alice@example.com' }, {});
@@ -27,4 +28,8 @@ test('returns null for malformed company ids', () => {
 test('returns a valid company id unchanged', () => {
   const validId = '507f1f77bcf86cd799439011';
   assert.equal(normalizeCompanyId(validId), validId);
+});
+
+test('stores a per-job company name on the job schema', () => {
+  assert.ok(Job.schema.paths.companyName);
 });

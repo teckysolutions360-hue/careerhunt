@@ -11,6 +11,11 @@ const jobSchema = new mongoose.Schema({
     ref: 'Company',
     required: true
   },
+  companyName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   companyWebsite: String,
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
