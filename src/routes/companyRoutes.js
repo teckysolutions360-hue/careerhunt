@@ -1,12 +1,23 @@
 import express from 'express'
 import Company from '../models/Company.js'
+import Job from '../models/job.js'
 
 const router = express.Router()
 
 router.get('/', async (req, res) => {
   try {
     const companies = await Company.find().sort('name')
-    res.json({ success: true, data: companies })
+    const companiesWithJobCount = await Promise.all(
+      companies.map(async (company) => {
+        const jobCount = await Job.countDocuments({ companyId: company._id, status: 'active' })
+        return {
+          ...company.toObject(),
+          jobCount,
+        }
+      })
+    )
+
+    res.json({ success: true, data: companiesWithJobCount })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })
   }

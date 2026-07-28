@@ -27,6 +27,70 @@ export const resolveEmployerCompanyDetails = (user, jobData = {}) => {
   }
 }
 
+export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}) => {
+  const normalized = { ...jobData };
+  const resolvedCompanyDetails = {
+    companyName: companyDetails.companyName || jobData.companyName || user?.name || user?.username || user?.email?.split('@')[0] || 'Default Company',
+    companyWebsite: companyDetails.companyWebsite || jobData.companyWebsite,
+    companyDescription: companyDetails.companyDescription || jobData.companyDescription || `Company profile for ${companyDetails.companyName || jobData.companyName || user?.name || user?.username || user?.email?.split('@')[0] || 'Default Company'}`,
+  };
+
+  if (resolvedCompanyDetails.companyName) {
+    normalized.companyName = resolvedCompanyDetails.companyName;
+  }
+
+  if (resolvedCompanyDetails.companyWebsite) {
+    normalized.companyWebsite = resolvedCompanyDetails.companyWebsite;
+  }
+
+  if (resolvedCompanyDetails.companyDescription) {
+    normalized.companyDescription = resolvedCompanyDetails.companyDescription;
+  }
+
+  if (!normalized.category) normalized.category = 'General';
+  if (!normalized.salaryCurrency) normalized.salaryCurrency = 'USD';
+  if (!normalized.vacancies) normalized.vacancies = 1;
+  if (!normalized.workMode) normalized.workMode = 'remote';
+  if (!normalized.employmentType) normalized.employmentType = 'full-time';
+  if (!normalized.experienceLevel) normalized.experienceLevel = 'mid';
+  if (!normalized.educationLevel) normalized.educationLevel = 'bachelors';
+  if (!normalized.description && normalized.summary) normalized.description = normalized.summary;
+  if (!normalized.summary && normalized.description) normalized.summary = normalized.description;
+  if (typeof normalized.responsibilities === 'string') {
+    normalized.responsibilities = normalized.responsibilities.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.requirements === 'string') {
+    normalized.requirements = normalized.requirements.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.preferredQualifications === 'string') {
+    normalized.preferredQualifications = normalized.preferredQualifications.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.benefits === 'string') {
+    normalized.benefits = normalized.benefits.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.requiredSkills === 'string') {
+    normalized.requiredSkills = normalized.requiredSkills.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.keywords === 'string') {
+    normalized.keywords = normalized.keywords.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.tags === 'string') {
+    normalized.tags = normalized.tags.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+
+  if (normalized.applicationDeadline) {
+    normalized.applicationDeadline = new Date(normalized.applicationDeadline);
+  }
+  if (normalized.postedDate) {
+    normalized.postedDate = new Date(normalized.postedDate);
+  }
+  if (normalized.expiryDate) {
+    normalized.expiryDate = new Date(normalized.expiryDate);
+  }
+
+  return normalized;
+}
+
 export const createJob = async (req, res) => {
   try {
     const jobData = { ...req.body };
@@ -39,6 +103,8 @@ export const createJob = async (req, res) => {
     const normalizedUserCompanyId = normalizeCompanyId(req.user?.companyId);
     const providedCompanyId = normalizeCompanyId(jobData.companyId);
     const explicitCompanyName = typeof req.body.companyName === 'string' && req.body.companyName.trim() !== '';
+    const normalizedJobData = normalizeJobPayload(jobData, req.user, { companyName, companyWebsite, companyDescription });
+    Object.assign(jobData, normalizedJobData);
 
     if (companyName) {
       jobData.companyName = companyName;
@@ -115,8 +181,6 @@ export const createJob = async (req, res) => {
       });
     }
 
-    if (!jobData.category) jobData.category = 'General';
-
     const job = new Job(jobData);
     await job.save();
     
@@ -131,6 +195,8 @@ export const createJob = async (req, res) => {
     });
   }
 };
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const getJobs = async (req, res) => {
   try {
@@ -151,16 +217,37 @@ export const getJobs = async (req, res) => {
       sort = '-postedDate'
     } = req.query;
 
+    const normalizeQueryValue = (value) => Array.isArray(value) ? value[0] : value || '';
+    const normalizeFilterValue = (value) => normalizeQueryValue(value).trim().replace(/\s+/g, ' ');
+    const normalizedCountry = normalizeFilterValue(country);
+    const normalizedCity = normalizeFilterValue(city);
+
     const query = { status: 'active' };
     
     // Search by keyword
-    if (keyword) {
-      query.$text = { $search: keyword };
+    if (normalizeQueryValue(keyword)) {
+      query.$text = { $search: normalizeQueryValue(keyword) };
     }
     
     // Filters
-    if (country) query.country = country;
-    if (city) query.city = city;
+    if (normalizedCountry) {
+      const countryValue = normalizedCountry.toLowerCase();
+      const countryAliases = ['uae', 'united arab emirates', 'united arab emirates (uae)'];
+
+      if (countryAliases.includes(countryValue)) {
+        query.country = { $in: [/uae/i, /united arab emirates/i, /united arab emirates \(uae\)/i] };
+      } else {
+        query.country = { $regex: escapeRegExp(normalizedCountry), $options: 'i' };
+      }
+    }
+
+    if (normalizedCity) {
+      query.city = {
+        $regex: escapeRegExp(normalizedCity),
+        $options: 'i'
+      };
+    }
+
     if (company) {
       if (company === 'null' || company === 'undefined' || !mongoose.Types.ObjectId.isValid(company)) {
         // Invalid company filter should never return all jobs.

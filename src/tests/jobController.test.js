@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveEmployerCompanyDetails, normalizeCompanyId } from '../controllers/jobController.js';
+import { resolveEmployerCompanyDetails, normalizeCompanyId, normalizeJobPayload } from '../controllers/jobController.js';
 import Job from '../models/job.js';
 
 test('uses the authenticated employer name when no company name is provided', () => {
@@ -32,4 +32,21 @@ test('returns a valid company id unchanged', () => {
 
 test('stores a per-job company name on the job schema', () => {
   assert.ok(Job.schema.paths.companyName);
+});
+
+test('preserves company website and company description on the normalized job payload', () => {
+  const result = normalizeJobPayload(
+    {
+      title: 'Senior Software Engineer',
+      companyName: 'Acme Studio',
+      companyWebsite: 'https://acme.com',
+      companyDescription: 'We build products for modern teams.'
+    },
+    { name: 'Alice Johnson' },
+    { companyName: 'Acme Studio', companyWebsite: 'https://acme.com', companyDescription: 'We build products for modern teams.' }
+  );
+
+  assert.equal(result.companyName, 'Acme Studio');
+  assert.equal(result.companyWebsite, 'https://acme.com');
+  assert.equal(result.companyDescription, 'We build products for modern teams.');
 });
