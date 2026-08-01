@@ -34,6 +34,10 @@ test('stores a per-job company name on the job schema', () => {
   assert.ok(Job.schema.paths.companyName);
 });
 
+test('stores market context on the job schema', () => {
+  assert.ok(Job.schema.paths.marketContext);
+});
+
 test('preserves company website and company description on the normalized job payload', () => {
   const result = normalizeJobPayload(
     {

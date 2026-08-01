@@ -79,6 +79,10 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
     normalized.tags = normalized.tags.split(',').map((item) => item.trim()).filter(Boolean);
   }
 
+  if (normalized.marketContext !== undefined) {
+    normalized.marketContext = typeof normalized.marketContext === 'string' ? normalized.marketContext.trim() : '';
+  }
+
   if (normalized.applicationDeadline) {
     normalized.applicationDeadline = new Date(normalized.applicationDeadline);
   }

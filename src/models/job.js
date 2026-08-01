@@ -73,6 +73,7 @@ const jobSchema = new mongoose.Schema({
   applicationUrl: String,
   applicationDeadline: Date,
   companyDescription: String,
+  marketContext: String,
   keywords: [String],
   tags: [String],
   isFeatured: {
