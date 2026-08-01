@@ -50,3 +50,18 @@ test('preserves company website and company description on the normalized job pa
   assert.equal(result.companyWebsite, 'https://acme.com');
   assert.equal(result.companyDescription, 'We build products for modern teams.');
 });
+
+test('preserves contact email and whatsapp number on the normalized job payload', () => {
+  const result = normalizeJobPayload(
+    {
+      title: 'Senior Software Engineer',
+      contactEmail: 'recruiter@example.com',
+      whatsappNumber: '+971501234567'
+    },
+    { name: 'Alice Johnson' },
+    { companyName: 'Acme Studio' }
+  );
+
+  assert.equal(result.contactEmail, 'recruiter@example.com');
+  assert.equal(result.whatsappNumber, '+971501234567');
+});

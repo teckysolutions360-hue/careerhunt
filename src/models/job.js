@@ -69,6 +69,7 @@ const jobSchema = new mongoose.Schema({
     default: 1
   },
   applicationEmail: String,
+  whatsappNumber: String,
   applicationUrl: String,
   applicationDeadline: Date,
   companyDescription: String,

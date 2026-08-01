@@ -49,6 +49,7 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
 
   if (!normalized.category) normalized.category = 'General';
   if (!normalized.salaryCurrency) normalized.salaryCurrency = 'USD';
+  if (normalized.whatsappNumber === undefined) normalized.whatsappNumber = '';
   if (!normalized.vacancies) normalized.vacancies = 1;
   if (!normalized.workMode) normalized.workMode = 'remote';
   if (!normalized.employmentType) normalized.employmentType = 'full-time';
