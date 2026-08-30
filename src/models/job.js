@@ -42,16 +42,22 @@ const jobSchema = new mongoose.Schema({
     type: String
   },
   address: String,
+  postalCode: String,
   location: String,
   employmentType: {
     type: String,
-    enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance', 'temporary'],
+    enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance', 'temporary', 'volunteer', 'per-diem', 'other'],
     required: true
   },
   workMode: {
     type: String,
     enum: ['remote', 'onsite', 'hybrid', 'not-specified'],
     default: 'not-specified'
+  },
+  salaryAvailable: {
+    type: String,
+    enum: ['yes', 'no', 'not-disclosed'],
+    default: 'not-disclosed'
   },
   salaryMin: Number,
   salaryMax: Number,
@@ -66,13 +72,15 @@ const jobSchema = new mongoose.Schema({
   },
   experienceLevel: {
     type: String,
-    enum: ['entry', 'junior', 'mid', 'senior', 'lead', 'executive']
+    enum: ['entry', 'junior', 'mid', 'senior', 'lead', 'executive', 'manager', 'director', 'entry-level', 'mid-level', 'not-specified']
   },
+  experienceRequired: String,
   experienceMin: Number,
   educationLevel: {
     type: String,
-    enum: ['high-school', 'bachelors', 'masters', 'phd']
+    enum: ['high-school', 'diploma', 'associate-degree', 'bachelors', 'masters', 'doctorate', 'professional-certification', 'not-specified']
   },
+  educationRequired: String,
   skills: [String],
   requiredSkills: [String],
   responsibilities: [String],
@@ -84,12 +92,22 @@ const jobSchema = new mongoose.Schema({
     type: Number,
     default: 1
   },
+  applicationMethod: {
+    type: String,
+    enum: ['company-website', 'email', 'careerhunt-application'],
+    default: 'company-website'
+  },
   applicationUrl: String,
   applicationEmail: String,
   whatsappNumber: String,
   applicationDeadline: Date,
   validThrough: Date,
+  jobReferenceNumber: String,
+  eligibleApplicantLocation: String,
+  eligibleApplicantCountry: String,
+  eligibleApplicantCountries: String,
   sourceName: String,
+  sourceWebsite: String,
   sourceUrl: String,
   sourceDate: Date,
   lastVerifiedAt: Date,

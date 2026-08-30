@@ -27,6 +27,69 @@ export const resolveEmployerCompanyDetails = (user, jobData = {}) => {
   }
 }
 
+const normalizeEmploymentTypeValue = (value) => {
+  const raw = String(value || '').trim().toUpperCase();
+  const map = {
+    FULL_TIME: 'full-time',
+    PART_TIME: 'part-time',
+    CONTRACTOR: 'contract',
+    TEMPORARY: 'temporary',
+    INTERN: 'internship',
+    VOLUNTEER: 'volunteer',
+    PER_DIEM: 'per-diem',
+    OTHER: 'other',
+  };
+
+  return map[raw] || raw.toLowerCase().replace(/[_\s]+/g, '-');
+};
+
+const normalizeWorkModeValue = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (['remote', 'telecommute', 'work-from-home'].includes(raw)) return 'remote';
+  if (['onsite', 'on-site', 'on site'].includes(raw)) return 'onsite';
+  if (['hybrid', 'mixed'].includes(raw)) return 'hybrid';
+  if (!raw) return 'not-specified';
+  return raw;
+};
+
+const normalizeSalaryPeriodValue = (value) => {
+  const raw = String(value || '').trim().toUpperCase();
+  const map = {
+    HOUR: 'hour',
+    DAY: 'day',
+    WEEK: 'week',
+    MONTH: 'month',
+    YEAR: 'year',
+  };
+
+  return map[raw] || 'year';
+};
+
+const normalizeExperienceLevelValue = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (['entry-level', 'entry level'].includes(raw)) return 'entry';
+  if (['junior'].includes(raw)) return 'junior';
+  if (['mid-level', 'mid level'].includes(raw)) return 'mid';
+  if (['senior'].includes(raw)) return 'senior';
+  if (['manager'].includes(raw)) return 'lead';
+  if (['director'].includes(raw)) return 'executive';
+  if (['not-specified', 'not specified', 'n/a'].includes(raw)) return undefined;
+  return raw;
+};
+
+const normalizeEducationLevelValue = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (['high school', 'high-school'].includes(raw)) return 'high-school';
+  if (['diploma'].includes(raw)) return 'diploma';
+  if (['associate degree', 'associate-degree'].includes(raw)) return 'associate-degree';
+  if (["bachelor's degree", "bachelors degree", 'bachelors', 'bachelor degree'].includes(raw)) return 'bachelors';
+  if (["master's degree", "masters degree", 'masters'].includes(raw)) return 'masters';
+  if (['doctorate', "doctor's degree", 'phd'].includes(raw)) return 'doctorate';
+  if (['professional certification', 'certification'].includes(raw)) return 'professional-certification';
+  if (['not specified', 'not-specified', 'n/a'].includes(raw)) return 'not-specified';
+  return raw;
+};
+
 export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}) => {
   const normalized = { ...jobData };
   const resolvedCompanyDetails = {
@@ -54,6 +117,7 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
   if (!normalized.category) normalized.category = 'General';
   if (!normalized.salaryCurrency) normalized.salaryCurrency = 'USD';
   if (!normalized.salaryPeriod) normalized.salaryPeriod = 'year';
+  if (!normalized.applicationMethod) normalized.applicationMethod = 'company-website';
   if (normalized.whatsappNumber === undefined) normalized.whatsappNumber = '';
   if (!normalized.vacancies) normalized.vacancies = 1;
   if (!normalized.workMode) normalized.workMode = 'not-specified';
@@ -75,10 +139,10 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
     normalized.benefits = normalized.benefits.split('\n').map((item) => item.trim()).filter(Boolean);
   }
   if (typeof normalized.requiredSkills === 'string') {
-    normalized.requiredSkills = normalized.requiredSkills.split(',').map((item) => item.trim()).filter(Boolean);
+    normalized.requiredSkills = normalized.requiredSkills.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
   }
   if (typeof normalized.skills === 'string') {
-    normalized.skills = normalized.skills.split(',').map((item) => item.trim()).filter(Boolean);
+    normalized.skills = normalized.skills.split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
   }
   if (typeof normalized.keywords === 'string') {
     normalized.keywords = normalized.keywords.split(',').map((item) => item.trim()).filter(Boolean);
@@ -86,6 +150,12 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
   if (typeof normalized.tags === 'string') {
     normalized.tags = normalized.tags.split(',').map((item) => item.trim()).filter(Boolean);
   }
+
+  normalized.employmentType = normalizeEmploymentTypeValue(normalized.employmentType);
+  normalized.workMode = normalizeWorkModeValue(normalized.workMode);
+  normalized.salaryPeriod = normalizeSalaryPeriodValue(normalized.salaryPeriod);
+  normalized.experienceLevel = normalizeExperienceLevelValue(normalized.experienceLevel) || normalized.experienceLevel;
+  normalized.educationLevel = normalizeEducationLevelValue(normalized.educationLevel) || normalized.educationLevel;
 
   if (normalized.marketContext !== undefined) {
     normalized.marketContext = typeof normalized.marketContext === 'string' ? normalized.marketContext.trim() : '';
