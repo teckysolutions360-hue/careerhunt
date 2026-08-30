@@ -47,11 +47,16 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
     normalized.companyDescription = resolvedCompanyDetails.companyDescription;
   }
 
+  if (!normalized.companySlug && normalized.companyName) {
+    normalized.companySlug = slugify(normalized.companyName, { lower: true, strict: true });
+  }
+
   if (!normalized.category) normalized.category = 'General';
   if (!normalized.salaryCurrency) normalized.salaryCurrency = 'USD';
+  if (!normalized.salaryPeriod) normalized.salaryPeriod = 'year';
   if (normalized.whatsappNumber === undefined) normalized.whatsappNumber = '';
   if (!normalized.vacancies) normalized.vacancies = 1;
-  if (!normalized.workMode) normalized.workMode = 'remote';
+  if (!normalized.workMode) normalized.workMode = 'not-specified';
   if (!normalized.employmentType) normalized.employmentType = 'full-time';
   if (!normalized.experienceLevel) normalized.experienceLevel = 'mid';
   if (!normalized.educationLevel) normalized.educationLevel = 'bachelors';
@@ -72,6 +77,9 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
   if (typeof normalized.requiredSkills === 'string') {
     normalized.requiredSkills = normalized.requiredSkills.split(',').map((item) => item.trim()).filter(Boolean);
   }
+  if (typeof normalized.skills === 'string') {
+    normalized.skills = normalized.skills.split(',').map((item) => item.trim()).filter(Boolean);
+  }
   if (typeof normalized.keywords === 'string') {
     normalized.keywords = normalized.keywords.split(',').map((item) => item.trim()).filter(Boolean);
   }
@@ -83,14 +91,31 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
     normalized.marketContext = typeof normalized.marketContext === 'string' ? normalized.marketContext.trim() : '';
   }
 
+  if (normalized.featured !== undefined) normalized.isFeatured = Boolean(normalized.featured);
+  if (normalized.urgent !== undefined) normalized.isUrgent = Boolean(normalized.urgent);
+  if (normalized.jobStatus) normalized.status = normalized.jobStatus;
+  if (!normalized.jobStatus && normalized.status) normalized.jobStatus = normalized.status;
+  if (!normalized.validThrough && normalized.applicationDeadline) {
+    normalized.validThrough = normalized.applicationDeadline;
+  }
+
   if (normalized.applicationDeadline) {
     normalized.applicationDeadline = new Date(normalized.applicationDeadline);
+  }
+  if (normalized.validThrough) {
+    normalized.validThrough = new Date(normalized.validThrough);
   }
   if (normalized.postedDate) {
     normalized.postedDate = new Date(normalized.postedDate);
   }
   if (normalized.expiryDate) {
     normalized.expiryDate = new Date(normalized.expiryDate);
+  }
+  if (normalized.sourceDate) {
+    normalized.sourceDate = new Date(normalized.sourceDate);
+  }
+  if (normalized.lastVerifiedAt) {
+    normalized.lastVerifiedAt = new Date(normalized.lastVerifiedAt);
   }
 
   return normalized;

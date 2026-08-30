@@ -6,6 +6,11 @@ const jobSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  slug: {
+    type: String,
+    unique: true,
+    required: true
+  },
   companyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Company',
@@ -16,7 +21,9 @@ const jobSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  companySlug: String,
   companyWebsite: String,
+  companyLogo: String,
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -25,23 +32,26 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  subcategory: String,
   country: {
     type: String,
     required: true
   },
+  state: String,
   city: {
     type: String
   },
+  address: String,
   location: String,
   employmentType: {
     type: String,
-    enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance'],
+    enum: ['full-time', 'part-time', 'contract', 'internship', 'freelance', 'temporary'],
     required: true
   },
   workMode: {
     type: String,
-    enum: ['remote', 'onsite', 'hybrid'],
-    required: true
+    enum: ['remote', 'onsite', 'hybrid', 'not-specified'],
+    default: 'not-specified'
   },
   salaryMin: Number,
   salaryMax: Number,
@@ -49,29 +59,52 @@ const jobSchema = new mongoose.Schema({
     type: String,
     default: 'USD'
   },
-  description: String,
-  summary: String,
-  responsibilities: [String],
-  requirements: [String],
-  preferredQualifications: [String],
-  requiredSkills: [String],
-  benefits: [String],
+  salaryPeriod: {
+    type: String,
+    enum: ['hour', 'day', 'week', 'month', 'year'],
+    default: 'year'
+  },
   experienceLevel: {
     type: String,
     enum: ['entry', 'junior', 'mid', 'senior', 'lead', 'executive']
   },
+  experienceMin: Number,
   educationLevel: {
     type: String,
     enum: ['high-school', 'bachelors', 'masters', 'phd']
   },
+  skills: [String],
+  requiredSkills: [String],
+  responsibilities: [String],
+  requirements: [String],
+  preferredQualifications: [String],
+  qualifications: [String],
+  benefits: [String],
   vacancies: {
     type: Number,
     default: 1
   },
+  applicationUrl: String,
   applicationEmail: String,
   whatsappNumber: String,
-  applicationUrl: String,
   applicationDeadline: Date,
+  validThrough: Date,
+  sourceName: String,
+  sourceUrl: String,
+  sourceDate: Date,
+  lastVerifiedAt: Date,
+  jobStatus: {
+    type: String,
+    enum: ['active', 'expired', 'filled', 'paused', 'removed', 'inactive'],
+    default: 'active'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'expired', 'filled', 'paused', 'removed'],
+    default: 'active'
+  },
+  description: String,
+  summary: String,
   companyDescription: String,
   marketContext: String,
   keywords: [String],
@@ -80,7 +113,15 @@ const jobSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  featured: {
+    type: Boolean,
+    default: false
+  },
   isUrgent: {
+    type: Boolean,
+    default: false
+  },
+  urgent: {
     type: Boolean,
     default: false
   },
@@ -97,16 +138,6 @@ const jobSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Application'
   }],
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'expired'],
-    default: 'active'
-  },
-  slug: {
-    type: String,
-    unique: true,
-    required: true
-  },
   metaTitle: String,
   metaDescription: String,
   canonicalUrl: String

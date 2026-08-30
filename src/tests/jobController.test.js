@@ -38,6 +38,17 @@ test('stores market context on the job schema', () => {
   assert.ok(Job.schema.paths.marketContext);
 });
 
+test('stores structured job metadata and verification fields on the schema', () => {
+  assert.ok(Job.schema.paths.companySlug);
+  assert.ok(Job.schema.paths.companyLogo);
+  assert.ok(Job.schema.paths.salaryPeriod);
+  assert.ok(Job.schema.paths.validThrough);
+  assert.ok(Job.schema.paths.sourceName);
+  assert.ok(Job.schema.paths.sourceUrl);
+  assert.ok(Job.schema.paths.lastVerifiedAt);
+  assert.ok(Job.schema.paths.jobStatus);
+});
+
 test('preserves company website and company description on the normalized job payload', () => {
   const result = normalizeJobPayload(
     {
