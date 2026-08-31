@@ -191,6 +191,38 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
   return normalized;
 }
 
+export const scoreRelatedJob = (sourceJob = {}, candidateJob = {}) => {
+  const sourceCategory = String(sourceJob.category || '').trim().toLowerCase();
+  const candidateCategory = String(candidateJob.category || '').trim().toLowerCase();
+  const sourceCity = String(sourceJob.city || '').trim().toLowerCase();
+  const candidateCity = String(candidateJob.city || '').trim().toLowerCase();
+  const sourceCountry = String(sourceJob.country || '').trim().toLowerCase();
+  const candidateCountry = String(candidateJob.country || '').trim().toLowerCase();
+  const sourceSkills = Array.isArray(sourceJob.requiredSkills) ? sourceJob.requiredSkills : [];
+  const candidateSkills = Array.isArray(candidateJob.requiredSkills) ? candidateJob.requiredSkills : [];
+  const sourceExperience = String(sourceJob.experienceLevel || '').trim().toLowerCase();
+  const candidateExperience = String(candidateJob.experienceLevel || '').trim().toLowerCase();
+  const sourceCompanyId = String(sourceJob.companyId || '').trim();
+  const candidateCompanyId = String(candidateJob.companyId || '').trim();
+
+  let score = 0;
+
+  if (sourceCategory && candidateCategory && sourceCategory === candidateCategory) score += 30;
+  if (sourceCity && candidateCity && sourceCity === candidateCity) score += 22;
+  if (sourceCountry && candidateCountry && sourceCountry === candidateCountry) score += 12;
+
+  const overlap = sourceSkills.filter((skill) => {
+    const normalizedSkill = String(skill || '').trim().toLowerCase();
+    return normalizedSkill && candidateSkills.some((candidateSkill) => String(candidateSkill || '').trim().toLowerCase() === normalizedSkill);
+  }).length;
+  score += overlap * 12;
+
+  if (sourceExperience && candidateExperience && sourceExperience === candidateExperience) score += 8;
+  if (sourceCompanyId && candidateCompanyId && sourceCompanyId === candidateCompanyId) score += 6;
+
+  return score;
+};
+
 export const createJob = async (req, res) => {
   try {
     const jobData = { ...req.body };
@@ -411,32 +443,40 @@ export const getJobs = async (req, res) => {
 export const getJobBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    
+
     const job = await Job.findOne({ slug, status: 'active' })
       .populate('companyId', 'name logo website description')
       .populate('createdBy', 'name username avatar email role');
-    
+
     if (!job) {
       return res.status(404).json({
         success: false,
         message: 'Job not found'
       });
     }
-    // NOTE: view counting is handled via dedicated endpoint to avoid double-counting
-    
-    // Get similar jobs
-    const similarJobs = await Job.find({
-      category: job.category,
+
+    const relatedJobs = await Job.find({
       _id: { $ne: job._id },
       status: 'active'
     })
-      .limit(5)
-      .populate('companyId', 'name logo');
-    
+      .populate('companyId', 'name logo website description')
+      .limit(25)
+      .lean();
+
+    const scoredJobs = relatedJobs
+      .map((candidate) => ({
+        ...candidate,
+        score: scoreRelatedJob(job.toObject ? job.toObject() : job, candidate)
+      }))
+      .filter((candidate) => candidate.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map(({ score, ...candidate }) => candidate);
+
     res.json({
       success: true,
       data: job,
-      similarJobs
+      relatedJobs: scoredJobs.length ? scoredJobs : relatedJobs.slice(0, 6)
     });
   } catch (error) {
     res.status(500).json({

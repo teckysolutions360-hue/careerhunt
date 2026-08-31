@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveEmployerCompanyDetails, normalizeCompanyId, normalizeJobPayload } from '../controllers/jobController.js';
+import { resolveEmployerCompanyDetails, normalizeCompanyId, normalizeJobPayload, scoreRelatedJob } from '../controllers/jobController.js';
 import Job from '../models/job.js';
 
 test('uses the authenticated employer name when no company name is provided', () => {
@@ -79,4 +79,35 @@ test('preserves contact email and whatsapp number on the normalized job payload'
 
   assert.equal(result.contactEmail, 'recruiter@example.com');
   assert.equal(result.whatsappNumber, '+971501234567');
+});
+
+test('scores jobs higher when they match category, city, and skills', () => {
+  const job = {
+    category: 'Software Engineering',
+    city: 'Dubai',
+    country: 'UAE',
+    requiredSkills: ['Node.js', 'TypeScript'],
+    experienceLevel: 'mid',
+    companyId: '64f7ddfd7c7d2d1b5d9e0b31'
+  };
+
+  const sameCategoryCitySkill = {
+    category: 'Software Engineering',
+    city: 'Dubai',
+    country: 'UAE',
+    requiredSkills: ['TypeScript', 'React'],
+    experienceLevel: 'mid',
+    companyId: '64f7ddfd7c7d2d1b5d9e0b32'
+  };
+
+  const differentCategory = {
+    category: 'Sales',
+    city: 'Abu Dhabi',
+    country: 'UAE',
+    requiredSkills: ['Negotiation'],
+    experienceLevel: 'senior',
+    companyId: '64f7ddfd7c7d2d1b5d9e0b33'
+  };
+
+  assert.ok(scoreRelatedJob(job, sameCategoryCitySkill) > scoreRelatedJob(job, differentCategory));
 });
