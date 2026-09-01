@@ -81,6 +81,19 @@ test('preserves contact email and whatsapp number on the normalized job payload'
   assert.equal(result.whatsappNumber, '+971501234567');
 });
 
+test('preserves market context on the normalized job payload', () => {
+  const result = normalizeJobPayload(
+    {
+      title: 'Senior Software Engineer',
+      marketContext: 'Hiring for Dubai-based fintech growth team'
+    },
+    { name: 'Alice Johnson' },
+    { companyName: 'Acme Studio' }
+  );
+
+  assert.equal(result.marketContext, 'Hiring for Dubai-based fintech growth team');
+});
+
 test('scores jobs higher when they match category, city, and skills', () => {
   const job = {
     category: 'Software Engineering',
