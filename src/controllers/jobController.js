@@ -135,6 +135,18 @@ export const normalizeJobPayload = (jobData = {}, user = {}, companyDetails = {}
   if (typeof normalized.preferredQualifications === 'string') {
     normalized.preferredQualifications = normalized.preferredQualifications.split('\n').map((item) => item.trim()).filter(Boolean);
   }
+  if (typeof normalized.qualifications === 'string') {
+    normalized.qualifications = normalized.qualifications.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof normalized.requiredQualifications === 'string') {
+    normalized.requiredQualifications = normalized.requiredQualifications.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+  if (normalized.qualifications && !normalized.requiredQualifications) {
+    normalized.requiredQualifications = normalized.qualifications;
+  }
+  if (normalized.requiredQualifications && !normalized.qualifications) {
+    normalized.qualifications = normalized.requiredQualifications;
+  }
   if (typeof normalized.benefits === 'string') {
     normalized.benefits = normalized.benefits.split('\n').map((item) => item.trim()).filter(Boolean);
   }
@@ -330,6 +342,61 @@ export const createJob = async (req, res) => {
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+export const buildJobQuery = ({ user = null, createdBy, status, country, city, company, category, employmentType, workMode, experienceLevel, salaryMin, salaryMax, keyword } = {}) => {
+  const query = {};
+
+  if (status) {
+    query.status = status;
+  } else if (!(user && user.role === 'employer') && !createdBy) {
+    query.status = 'active';
+  }
+
+  if (keyword) {
+    query.$text = { $search: keyword };
+  }
+
+  if (country) {
+    const normalizedCountry = String(country).trim().replace(/\s+/g, ' ');
+    const countryValue = normalizedCountry.toLowerCase();
+    const countryAliases = ['uae', 'united arab emirates', 'united arab emirates (uae)'];
+
+    if (countryAliases.includes(countryValue)) {
+      query.country = { $in: [/uae/i, /united arab emirates/i, /united arab emirates \(uae\)/i] };
+    } else {
+      query.country = { $regex: escapeRegExp(normalizedCountry), $options: 'i' };
+    }
+  }
+
+  if (city) {
+    query.city = {
+      $regex: escapeRegExp(String(city).trim().replace(/\s+/g, ' ')),
+      $options: 'i'
+    };
+  }
+
+  if (company) {
+    if (company === 'null' || company === 'undefined' || !mongoose.Types.ObjectId.isValid(company)) {
+      return { __empty: true };
+    }
+    query.companyId = company;
+  }
+
+  if (user && user.role === 'employer') {
+    query.createdBy = user.id;
+  } else if (createdBy && mongoose.Types.ObjectId.isValid(createdBy)) {
+    query.createdBy = createdBy;
+  }
+
+  if (category) query.category = category;
+  if (employmentType) query.employmentType = employmentType;
+  if (workMode) query.workMode = workMode;
+  if (experienceLevel) query.experienceLevel = experienceLevel;
+  if (salaryMin) query.salaryMin = { $gte: parseInt(salaryMin) };
+  if (salaryMax) query.salaryMax = { $lte: parseInt(salaryMax) };
+
+  return query;
+};
+
 export const getJobs = async (req, res) => {
   try {
     const {
@@ -354,62 +421,34 @@ export const getJobs = async (req, res) => {
     const normalizedCountry = normalizeFilterValue(country);
     const normalizedCity = normalizeFilterValue(city);
 
-    const query = { status: 'active' };
-    
-    // Search by keyword
-    if (normalizeQueryValue(keyword)) {
-      query.$text = { $search: normalizeQueryValue(keyword) };
-    }
-    
-    // Filters
-    if (normalizedCountry) {
-      const countryValue = normalizedCountry.toLowerCase();
-      const countryAliases = ['uae', 'united arab emirates', 'united arab emirates (uae)'];
+    const query = buildJobQuery({
+      user: req.user,
+      createdBy,
+      status: undefined,
+      country: normalizedCountry,
+      city: normalizedCity,
+      company,
+      category,
+      employmentType,
+      workMode,
+      experienceLevel,
+      salaryMin,
+      salaryMax,
+      keyword: normalizeQueryValue(keyword)
+    });
 
-      if (countryAliases.includes(countryValue)) {
-        query.country = { $in: [/uae/i, /united arab emirates/i, /united arab emirates \(uae\)/i] };
-      } else {
-        query.country = { $regex: escapeRegExp(normalizedCountry), $options: 'i' };
-      }
+    if (query.__empty) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 0,
+          total: 0,
+          pages: 0
+        }
+      });
     }
-
-    if (normalizedCity) {
-      query.city = {
-        $regex: escapeRegExp(normalizedCity),
-        $options: 'i'
-      };
-    }
-
-    if (company) {
-      if (company === 'null' || company === 'undefined' || !mongoose.Types.ObjectId.isValid(company)) {
-        // Invalid company filter should never return all jobs.
-        return res.json({
-          success: true,
-          data: [],
-          pagination: {
-            page: 1,
-            limit: 0,
-            total: 0,
-            pages: 0
-          }
-        });
-      }
-      query.companyId = company;
-    }
-
-    if (req.user && req.user.role === 'employer') {
-      // Employers should only be able to query their own job posts from the dashboard.
-      query.createdBy = req.user.id;
-    } else if (createdBy && mongoose.Types.ObjectId.isValid(createdBy)) {
-      query.createdBy = createdBy;
-    }
-
-    if (category) query.category = category;
-    if (employmentType) query.employmentType = employmentType;
-    if (workMode) query.workMode = workMode;
-    if (experienceLevel) query.experienceLevel = experienceLevel;
-    if (salaryMin) query.salaryMin = { $gte: parseInt(salaryMin) };
-    if (salaryMax) query.salaryMax = { $lte: parseInt(salaryMax) };
     
     const skip = (parseInt(page) - 1) * parseInt(limit);
     

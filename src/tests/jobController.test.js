@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveEmployerCompanyDetails, normalizeCompanyId, normalizeJobPayload, scoreRelatedJob } from '../controllers/jobController.js';
+import { resolveEmployerCompanyDetails, normalizeCompanyId, normalizeJobPayload, scoreRelatedJob, buildJobQuery } from '../controllers/jobController.js';
 import Job from '../models/job.js';
 
 test('uses the authenticated employer name when no company name is provided', () => {
@@ -94,6 +94,20 @@ test('preserves market context on the normalized job payload', () => {
   assert.equal(result.marketContext, 'Hiring for Dubai-based fintech growth team');
 });
 
+test('preserves qualifications on the normalized job payload', () => {
+  const result = normalizeJobPayload(
+    {
+      title: 'Accountant',
+      qualifications: 'Bachelor\'s degree\n2+ years experience\nQuickBooks proficiency'
+    },
+    { name: 'Alice Johnson' },
+    { companyName: 'Acme Studio' }
+  );
+
+  assert.deepEqual(result.qualifications, ["Bachelor's degree", '2+ years experience', 'QuickBooks proficiency']);
+  assert.deepEqual(result.requiredQualifications, ["Bachelor's degree", '2+ years experience', 'QuickBooks proficiency']);
+});
+
 test('scores jobs higher when they match category, city, and skills', () => {
   const job = {
     category: 'Software Engineering',
@@ -123,4 +137,33 @@ test('scores jobs higher when they match category, city, and skills', () => {
   };
 
   assert.ok(scoreRelatedJob(job, sameCategoryCitySkill) > scoreRelatedJob(job, differentCategory));
+});
+
+test('keeps employer dashboard queries from forcing only active jobs', () => {
+  const query = buildJobQuery({
+    user: { role: 'employer', id: 'employer-123' },
+    createdBy: 'employer-123',
+    status: undefined
+  });
+
+  assert.equal(query.createdBy, 'employer-123');
+  assert.equal(query.status, undefined);
+});
+
+test('keeps employer queries with explicit createdBy from being forced active-only', () => {
+  const employerId = '507f1f77bcf86cd799439011';
+  const query = buildJobQuery({
+    user: null,
+    createdBy: employerId,
+    status: undefined
+  });
+
+  assert.equal(query.createdBy, employerId);
+  assert.equal(query.status, undefined);
+});
+
+test('keeps public queries limited to active jobs by default', () => {
+  const query = buildJobQuery({ user: null });
+
+  assert.deepEqual(query, { status: 'active' });
 });
